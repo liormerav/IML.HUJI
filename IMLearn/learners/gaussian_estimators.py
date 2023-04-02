@@ -214,7 +214,6 @@ class MultivariateGaussian:
         """
 
         n = len(mu)  # dim of the distribution
-
         # Calculate the log-determinant of the cov matrix
         sign, log_det = np.linalg.slogdet(cov)
         # mahalanobis distance of each data point from the mean
