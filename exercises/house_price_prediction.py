@@ -1,4 +1,6 @@
-from IMLearn.utils import split_train_test, utils
+import plotly
+
+from IMLearn.utils import split_train_test
 from IMLearn.learners.regressors import LinearRegression
 
 from typing import NoReturn, Optional
@@ -13,13 +15,14 @@ pio.templates.default = "simple_white"
 train_col = []
 
 
+
 def clean_data(x, y):
     """"
     function cleans the data in the training set (remove duplicates and na values)
     """
-    df = pd.concat([x.reset_index(drop=True), y.reset_index(drop=True)], axis=1)
-    df = df.dropna().drop_duplicates()
-    return df
+    m = pd.concat([x.reset_index(drop=True), y.reset_index(drop=True)], axis=1)
+    m = m.dropna().drop_duplicates()
+    return m
 
 
 def preprocess_data(X: pd.DataFrame, y: Optional[pd.Series] = None):
@@ -53,7 +56,6 @@ def preprocess_data(X: pd.DataFrame, y: Optional[pd.Series] = None):
         # limit room number to 30
         data = data[data["bedrooms"] < 30]
 
-
     else:
         # test
         data = X
@@ -67,7 +69,7 @@ def preprocess_data(X: pd.DataFrame, y: Optional[pd.Series] = None):
             data.insert(loc=len(data.columns), column=col, value=0)
 
     # drop unesscary columns
-    col_drop = ['sqft_living15', 'sqft_lot15', 'lat', 'long', 'id', 'date']
+    col_drop = ['sqft_living15', 'sqft_lot15', 'lat', 'long', 'id', 'date', 'zipcode__0.0']
     data = data.drop(col_drop, axis=1)
     # fix values on dataset in order to preform learning
     # change negative values to the average of column
@@ -82,30 +84,13 @@ def preprocess_data(X: pd.DataFrame, y: Optional[pd.Series] = None):
         col_mean = data.loc[~mask, col].mean()  # Calculate the mean of non-negative values
         data.loc[mask, col] = col_mean  # Replace negative values with the mean
 
-
+    # make yr_renovated binary column
+    data['yr_renovated'] = data['yr_renovated'].apply(lambda x: 0 if x == 0 else 1)
+    # if water front is not 0 or 1 change to 0
+    data['waterfront'] = data['waterfront'].apply(lambda x: 0 if x != 0 and x != 1 else x)
     if y is not None:
         return data.drop('price', axis=1), data['price']
     return data.drop('price', axis=1)
-
-
-""""
-    # We expect non-negative values in all the columns which are number typed
-    data = data[data.select_dtypes(include=[np.number]).ge(0).all(1)]
-    # drop if the date is not in the correct format
-    for i in range(len(data)):
-        try:
-            data.strptime(data.loc[i, 'date'], '%Y%m%dT000000')
-        except ValueError:
-            data.drop(i, inplace=True)
-    # check year format in column yr_built
-    data = data[pd.to_numeric(data['yr_built'], errors='coerce').notnull()]
-    data['yr_built'] = data['yr_built'].astype(int)
-    data = data[(data['yr_built'] >= 0) & (data['yr_built'] <= 2023)]
-    # check year format in column yr_renovated
-    data = data[pd.to_numeric(data['yr_renovated'], errors='coerce').notnull()]
-    data['yr_renovated'] = data['yr_renovated'].astype(int)
-    data = data[(data['yr_renovated'] >= 0) & (data['yr_renovated'] <= 2023)]
-"""
 
 
 def feature_evaluation(X: pd.DataFrame, y: pd.Series, output_path: str = ".") -> NoReturn:
@@ -126,7 +111,6 @@ def feature_evaluation(X: pd.DataFrame, y: pd.Series, output_path: str = ".") ->
         Path to folder in which plots are saved
     """
     X = X.loc[:, ~X.columns.str.startswith('zipcode_')]
-    X.drop(['sqft_living15', 'sqft_lot15', 'lat', 'long', 'id', 'date'], axis='columns', inplace=True)
     pearson_lst = []
 
     for col in X:
@@ -138,18 +122,14 @@ def feature_evaluation(X: pd.DataFrame, y: pd.Series, output_path: str = ".") ->
         pearson = numerator / pearson_domi
         pearson_lst.append(pearson)
         # Define a list of colors
-        colors = ["blue"] * len(X.columns)
 
         # Create a scatter plot with OLS trendline for each column in X
-        scatter_plots = [px.scatter(x=X[col], y=y, trendline="ols",
-                                    color_discrete_sequence=[colors[i]],
+        fig = px.scatter(x=X[col], y=y, trendline="ols",
+                                    color_discrete_sequence=['blue'],
                                     title=f"Correlation of {col} and Response\n Pearson equals to {pearson}",
                                     labels={"x": f"{col}", "y": "Response"})
-                         for i, col in enumerate(X.columns)]
+        fig.write_image(output_path + f"/pearson{col}.png", engine='orca')
 
-        # Show all scatter plots
-        for fig in scatter_plots:
-            fig.write_image(output_path + f"correlation_pearson{col}.png")
 
 
 if __name__ == '__main__':
@@ -163,11 +143,11 @@ if __name__ == '__main__':
 
     # Question 2 - Preprocessing of housing prices dataset
 
-    train_X,train_Y = preprocess_data(train_X, train_Y)
-    test_X= preprocess_data(test_X)
+    train_X, train_Y = preprocess_data(train_X, train_Y)
+    test_X = preprocess_data(test_X)
 
     # Question 3 - Feature evaluation with respect to response
-    # feature_evaluation(test_X, test_Y,'C:/Users/liorm/PycharmProjects/IML.HUJI/datasets/house_prices.csv')
+    feature_evaluation(test_X, test_Y,'C:/Users/liorm/PycharmProjects/IML.HUJI/datasets')
 
     # Question 4 - Fit model over increasing percentages of the overall training data
     # For every percentage p in 10%, 11%, ..., 100%, repeat the following 10 times:
@@ -183,82 +163,44 @@ if __name__ == '__main__':
     array_var_avg = np.array([])
     array_loss_avg = np.array([])
 
-    for p in range(10,101):
+    for p in range(10, 101):
 
         # compute loss for each sample
         loss_array = np.array([])
         for j in range(10):
             X = train_X.sample(frac=p / 100.0)
             Y = train_Y.loc[X.index]
-            lr = LinearRegression(include_intercept=True).fit(X, Y)
+            linear_reg = LinearRegression(include_intercept=True).fit(X, Y)
 
-            loss = lr.loss(test_X, test_Y)
-            loss_array =np.append(loss_array,loss)
+            loss = linear_reg.loss(test_X, test_Y)
+            loss_array = np.append(loss_array, loss)
 
         # compute mean and std of loss array
         loss_mean = np.mean(loss_array)
         loss_std = np.std(loss_array)
 
         # append mean and std to arrays
-        array_loss_avg= np.append(array_loss_avg,loss_mean)
-        array_var_avg =np.append(array_var_avg,2 * loss_std)
+        array_loss_avg = np.append(array_loss_avg, loss_mean)
+        array_var_avg = np.append(array_var_avg, loss_std)
 
     # Step 2: Plot mean loss with error bars
-    import matplotlib.pyplot as plt
 
-    range = list(range(10, 101))
-
+    range_ = list(range(10, 101))
     fig = go.Figure(
-        [go.Scatter(x=range, y=array_loss_avg - 2 * array_var_avg, fill=None, mode="lines", line=dict(color="blue")),
+        [go.Scatter(x=range_, y=array_loss_avg + 2 * array_var_avg, name="", fill=None, mode="lines",
+                    line=dict(color="blue")),
          # changed line color to blue
-         go.Scatter(x=range, y=array_loss_avg + 2 * array_var_avg, fill='tonexty', mode="lines", line=dict(color="blue")),
+         go.Scatter(x=range_, y=array_loss_avg - 2 * array_var_avg, name="", fill='tonexty', mode="lines",
+                    line=dict(color="blue")),
          # changed line color to blue
-         go.Scatter(x=range, y=array_var_avg, mode="markers+lines", marker=dict(color="black"))],
+         go.Scatter(x=range_, y=array_loss_avg, name="Loss", mode="markers+lines", marker=dict(color="black"))],
         layout=go.Layout(title="Mean Squared Error (MSE) as a Function Of Training Size",
                          xaxis=dict(title="Sample Size (%)"),
                          yaxis=dict(title="MSE"),
-                         showlegend=False,
+                         showlegend=True,
                          plot_bgcolor='white',  # added plot background color
                          paper_bgcolor='white',  # added paper background color
                          font=dict(size=12, color='black')  # modified font properties
                          ))
 
-    fig.show()
-
-    """
-    import pandas as pd
-        import numpy as np
-    
-        array_var_avg = []
-        array_loss_avg = []
-        for i in range(10, 101):
-            # compute size of sample
-            n = int(i / 100 * len(train_X))
-    
-            # concat data and sample from it
-            df = pd.concat([train_X.reset_index(drop=True), train_Y.reset_index(drop=True)], axis=1)
-            samples = df.sample(n)
-    
-            # compute loss for each sample
-            loss_array = []
-            for j in range(10):
-                Y = samples[['price']]
-                X = samples.drop('price', axis=1)
-                lr = LinearRegression(include_intercept=True).fit(X, Y)
-                loss = lr.loss(test_X, test_Y)
-                loss_array.append(loss)
-    
-            # compute mean and std of loss array
-            loss_mean = np.mean(loss_array)
-            loss_std = np.std(loss_array)
-    
-            # append mean and std to arrays
-            array_loss_avg.append(loss_mean)
-            array_var_avg.append(2 * loss_std)
-    
-        # plot mean loss with error bars
-        plt.errorbar(range(10, 101), array_loss_avg, yerr=array_var_avg)
-        plt.xlabel('Training data size (%)')
-        plt.ylabel('Average loss')
-        plt.show()
-    """
+    fig.write_image('C:/Users/liorm/PycharmProjects/IML.HUJI/datasets' + f"/Loss.png", engine='orca')
