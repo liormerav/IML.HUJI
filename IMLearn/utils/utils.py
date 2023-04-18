@@ -33,7 +33,21 @@ def split_train_test(X: pd.DataFrame, y: pd.Series, train_proportion: float = .7
         Responses of test samples
 
     """
-    raise NotImplementedError()
+
+    # The idea is to take all indices and then shuffle them to get randomly indices order
+    indices = np.arange(len(X))
+    np.random.shuffle(indices)
+    train_samples_num = int(np.ceil(train_proportion * len(X)))
+    test_samples_num = int(np.floor((1 - train_proportion) * len(X)))
+    train_indices = indices[:train_samples_num]
+    test_indices = indices[train_samples_num:train_samples_num + test_samples_num]
+
+    train_X = X.iloc[train_indices, :]
+    train_y = y.iloc[train_indices]
+    test_X = X.iloc[test_indices, :]
+    test_y = y.iloc[test_indices]
+
+    return train_X, train_y, test_X, test_y
 
 
 def confusion_matrix(a: np.ndarray, b: np.ndarray) -> np.ndarray:
