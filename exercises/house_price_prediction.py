@@ -10,10 +10,10 @@ import plotly.graph_objects as go
 import plotly.express as px
 import plotly.io as pio
 
+
 pio.templates.default = "simple_white"
 
 train_col = []
-
 
 
 def clean_data(x, y):
@@ -125,11 +125,11 @@ def feature_evaluation(X: pd.DataFrame, y: pd.Series, output_path: str = ".") ->
 
         # Create a scatter plot with OLS trendline for each column in X
         fig = px.scatter(x=X[col], y=y, trendline="ols",
-                                    color_discrete_sequence=['blue'],
-                                    title=f"Correlation of {col} and Response\n Pearson equals to {pearson}",
-                                    labels={"x": f"{col}", "y": "Response"})
-        fig.write_image(output_path + f"/pearson{col}.png", engine='orca')
+                         color_discrete_sequence=['blue'],
+                         title=f"Correlation of {col} and Response\n Pearson equals to {pearson}",
+                         labels={"x": f"{col}", "y": "Response"})
 
+        fig.write_image(output_path + f"/pearson{col}.png", engine='orca')
 
 
 if __name__ == '__main__':
@@ -147,7 +147,7 @@ if __name__ == '__main__':
     test_X = preprocess_data(test_X)
 
     # Question 3 - Feature evaluation with respect to response
-    feature_evaluation(test_X, test_Y,'C:/Users/liorm/PycharmProjects/IML.HUJI/datasets')
+    feature_evaluation(test_X, test_Y, 'C:/Users/liorm/PycharmProjects/IML.HUJI/datasets')
 
     # Question 4 - Fit model over increasing percentages of the overall training data
     # For every percentage p in 10%, 11%, ..., 100%, repeat the following 10 times:
@@ -156,8 +156,7 @@ if __name__ == '__main__':
     #   3) Test fitted model over test set
     #   4) Store average and variance of loss over test set
     # Then plot average loss as function of training size with error ribbon of size (mean-2*std, mean+2*std)
-    import pandas as pd
-    import numpy as np
+
 
     # Step 1: Compute loss for each percentage value
     array_var_avg = np.array([])
@@ -189,18 +188,15 @@ if __name__ == '__main__':
     fig = go.Figure(
         [go.Scatter(x=range_, y=array_loss_avg + 2 * array_var_avg, name="", fill=None, mode="lines",
                     line=dict(color="blue")),
-         # changed line color to blue
          go.Scatter(x=range_, y=array_loss_avg - 2 * array_var_avg, name="", fill='tonexty', mode="lines",
                     line=dict(color="blue")),
-         # changed line color to blue
          go.Scatter(x=range_, y=array_loss_avg, name="Loss", mode="markers+lines", marker=dict(color="black"))],
         layout=go.Layout(title="Mean Squared Error (MSE) as a Function Of Training Size",
                          xaxis=dict(title="Sample Size (%)"),
                          yaxis=dict(title="MSE"),
                          showlegend=True,
-                         plot_bgcolor='white',  # added plot background color
-                         paper_bgcolor='white',  # added paper background color
-                         font=dict(size=12, color='black')  # modified font properties
+                         plot_bgcolor='white',
+                         paper_bgcolor='white',
+                         font=dict(size=12, color='black')
                          ))
-
     fig.write_image('C:/Users/liorm/PycharmProjects/IML.HUJI/datasets' + f"/Loss.png", engine='orca')

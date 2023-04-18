@@ -50,12 +50,11 @@ class LinearRegression(BaseEstimator):
         -----
         Fits model with or without an intercept depending on value of `self.include_intercept_`
         """
-        # TODO:to change the line of np.c too close
         if not self.include_intercept_:
             self.coefs_ = pinv(X) @ y
         # else we should add column of 1 (which will represent the intercret) and then multiply by x dagger y
         else:
-            X = np.c_[np.ones(len(X)), X]
+            X = np.concatenate((np.ones((len(X), 1)), X), axis=1)
             self.coefs_ = pinv(X) @ y
 
     def _predict(self, X: np.ndarray) -> np.ndarray:
