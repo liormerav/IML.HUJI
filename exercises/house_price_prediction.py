@@ -10,7 +10,6 @@ import plotly.graph_objects as go
 import plotly.express as px
 import plotly.io as pio
 
-
 pio.templates.default = "simple_white"
 
 train_col = []
@@ -21,7 +20,10 @@ def clean_data(x, y):
     function cleans the data in the training set (remove duplicates and na values)
     """
     m = pd.concat([x.reset_index(drop=True), y.reset_index(drop=True)], axis=1)
-    m = m.dropna().drop_duplicates()
+    # drop Na just in the relevant columns
+    m.replace(['NA', 'N/A', None], np.nan, inplace=True)
+    m = m.dropna(subset=m.columns[~m.columns.isin(['sqft_living15', 'sqft_lot15', 'lat', 'long', 'id', 'date'])])
+    m = m.drop_duplicates()
     return m
 
 
@@ -41,39 +43,39 @@ def preprocess_data(X: pd.DataFrame, y: Optional[pd.Series] = None):
     Post-processed design matrix and response vector (prices) - either as a single
     DataFrame or a Tuple[DataFrame, Series]
     """
-    columns = ['id', 'date', 'bedrooms', 'bathrooms', 'sqft_living', 'sqft_lot', 'floors', 'waterfront',
-               'view', 'condition', 'grade', 'sqft_above', 'sqft_basement', 'yr_built', 'yr_renovated', 'zipcode',
-               'lat', 'long', 'sqft_living15', 'sqft_lot15', 'price']
+    X_columns = ['id', 'date', 'bedrooms', 'bathrooms', 'sqft_living', 'sqft_lot', 'floors', 'waterfront',
+                 'view', 'condition', 'grade', 'sqft_above', 'sqft_basement', 'yr_built', 'yr_renovated', 'zipcode',
+                 'lat', 'long', 'sqft_living15', 'sqft_lot15']
+
+    # define the desired column order
+    # use the loc method to reorder the columns
+    X = X.loc[:, X_columns]
     # if its train we would "clean" the data
     global train_col
     if y is not None:
         data = clean_data(X, y)
-
-        data.columns = columns
-        # treat zip code with method: one hot encoding
-        data = pd.get_dummies(data, prefix='zipcode_', columns=['zipcode'])
-        train_col = data.columns.tolist()
         # limit room number to 30
-        data = data[data["bedrooms"] < 30]
+        if pd.api.types.is_numeric_dtype(data['bedrooms']):
+            data = data[data["bedrooms"] < 30]
+        # limit sqft living and sqft lot to 15
+        if pd.api.types.is_numeric_dtype(data['sqft_living']):
+            data = data[data["sqft_living"] > 15]
+        if pd.api.types.is_numeric_dtype(data['sqft_lot']):
+            data = data[data["sqft_lot"] > 15]
 
     else:
         # test
         data = X
-        data = pd.get_dummies(data, prefix='zipcode_', columns=['zipcode'])
-        data = data.drop(columns=[col for col in data.columns if col not in train_col])
-        # get set difference between columns in DataFrame and columns to check
-        missing_cols = set(train_col).difference(data.columns)
 
-        # add missing columns with default value of 0
-        for col in missing_cols:
-            data.insert(loc=len(data.columns), column=col, value=0)
 
     # drop unesscary columns
-    col_drop = ['sqft_living15', 'sqft_lot15', 'lat', 'long', 'id', 'date', 'zipcode__0.0']
+    col_drop = ['sqft_living15', 'sqft_lot15', 'lat', 'long', 'id', 'date']
     data = data.drop(col_drop, axis=1)
     # fix values on dataset in order to preform learning
     # change negative values to the average of column
     # Identify columns with negative values
+
+    data = data.apply(pd.to_numeric, errors='coerce')
 
     numerical_data = data.select_dtypes(include=np.number)
     negative_cols = numerical_data.columns[(numerical_data < 0).any()]
@@ -83,13 +85,28 @@ def preprocess_data(X: pd.DataFrame, y: Optional[pd.Series] = None):
         mask = data[col] < 0  # Create a boolean mask of negative values
         col_mean = data.loc[~mask, col].mean()  # Calculate the mean of non-negative values
         data.loc[mask, col] = col_mean  # Replace negative values with the mean
+    for col in numerical_data:  # replace Na values
+        col_mean = max(data[col][data[col] >= 0].mean(), 0)
+        data[col] = data[col].replace(['NA', 'N/A', None, np.nan], col_mean)
 
     # make yr_renovated binary column
     data['yr_renovated'] = data['yr_renovated'].apply(lambda x: 0 if x == 0 else 1)
     # if water front is not 0 or 1 change to 0
     data['waterfront'] = data['waterfront'].apply(lambda x: 0 if x != 0 and x != 1 else x)
     if y is not None:
+        # treat zip code with method: one hot encoding
+        data = pd.get_dummies(data, prefix='zipcode_', columns=['zipcode'],dummy_na=False)
+        train_col = data.columns.tolist()
         return data.drop('price', axis=1), data['price']
+
+    data = pd.get_dummies(data, prefix='zipcode_', columns=['zipcode'], dummy_na=False)
+    data = data.drop(columns=[col for col in data.columns if col not in train_col])
+    # get set difference between columns in DataFrame and columns to check
+    missing_cols = set(train_col).difference(data.columns)
+
+    # add missing columns with default value of 0
+    for col in missing_cols:
+        data.insert(loc=len(data.columns), column=col, value=0)
     return data.drop('price', axis=1)
 
 
@@ -157,7 +174,6 @@ if __name__ == '__main__':
     #   4) Store average and variance of loss over test set
     # Then plot average loss as function of training size with error ribbon of size (mean-2*std, mean+2*std)
 
-
     # Step 1: Compute loss for each percentage value
     array_var_avg = np.array([])
     array_loss_avg = np.array([])
@@ -199,4 +215,5 @@ if __name__ == '__main__':
                          paper_bgcolor='white',
                          font=dict(size=12, color='black')
                          ))
+    fig.show()
     fig.write_image('C:/Users/liorm/PycharmProjects/IML.HUJI/datasets' + f"/Loss.png", engine='orca')

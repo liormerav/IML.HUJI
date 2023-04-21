@@ -19,9 +19,7 @@ def mean_square_error(y_true: np.ndarray, y_pred: np.ndarray) -> float:
     MSE of given predictions
     """
     # calculate MSE by equation
-    errors_array = np.array(y_true.shape[0])
-    for index in range(y_true.shape[0]):
-        errors_array[index] = 2 ** (y_pred - y_true)
+    errors_array = (y_true - y_pred) * (y_true - y_pred)
     mse = np.sum(errors_array) / errors_array.shape[0]
     return mse
 

@@ -1,7 +1,3 @@
-import math
-import random
-
-import IMLearn.learners.regressors.linear_regression
 from IMLearn.learners.regressors import PolynomialFitting
 from IMLearn.utils import split_train_test
 
@@ -9,7 +5,6 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.io as pio
-import plotly.graph_objects as go
 
 pio.templates.default = "simple_white"
 
@@ -42,8 +37,6 @@ def load_data(filename: str) -> pd.DataFrame:
 
 
 def specific_from_israel(data):
-    import plotly.graph_objs as go
-
     # Subset data for Israel only
     israel_data = data[data['Country'] == 'Israel']
     israel_data['Year'] = israel_data['Year'].astype(str)
@@ -51,24 +44,26 @@ def specific_from_israel(data):
     fig = px.scatter(x=israel_data['DayOfYear'], y=israel_data['Temp'], color=israel_data['Year'],
                      title=f"Average Daily Temperature in Israel as a Function of Day of Year",
                      labels={"x": f"DayOfYear", "y": "Temperature"}, )
+    fig.write_image('C:/Users/liorm/PycharmProjects/IML.HUJI/datasets' + f"/year.png", engine='orca')
 
     israel_data['std'] = israel_data.groupby('Month')['Temp'].agg('std')
     israel_data_std = israel_data.groupby(["Month"]).agg(std=("Temp", "std"))
     fig = px.bar(x=range(1, 13), y=israel_data_std['std'],
                  title=f"SD of Temp by The Months Over the Years",
                  labels={"x": f"Month", "y": " SD of Temperature"}, )
+    fig.write_image('C:/Users/liorm/PycharmProjects/IML.HUJI/datasets' + f"/SD.png", engine='orca')
 
 
-def question_3(df):
-    data_grouped = df.groupby(["Country", "Month"], as_index=False).agg(mean=("Temp", "mean"), std=("Temp", "std"))
+def question_3(data):
+    data_grouped = data.groupby(["Country", "Month"], as_index=False).agg(mean=("Temp", "mean"), std=("Temp", "std"))
     fig = px.line(data_grouped, x=data_grouped['Month'], y=data_grouped['mean'], color='Country',
                   error_y=data_grouped['std'], title='Average Monthly Temperature by Country',
                   labels={'avg_temp': 'Temperature (C)', 'Month': 'Month', "x": f"Month", "y": "Mean Temperature"})
-    fig.show()
+    fig.write_image('C:/Users/liorm/PycharmProjects/IML.HUJI/datasets' + f"/groups.png", engine='orca')
 
 
-def question_4(df):
-    israel_data = df[df['Country'] == 'Israel']
+def question_4(data):
+    israel_data = data[data['Country'] == 'Israel']
     array_of_loss = np.zeros(10)
     train_X, train_Y, test_X, test_Y = split_train_test(pd.DataFrame(israel_data['DayOfYear']),
                                                         pd.Series(israel_data['Temp']))
@@ -82,38 +77,38 @@ def question_4(df):
     fig = px.bar(x=range(1, 11), y=array_of_loss, title=f"Loss of Polynomial Model Over the Test Set",
                  color_discrete_sequence=['red'],
                  labels={"x": f"K value", "y": " Loss"}, text=[f"Loss: {loss}" for loss in array_of_loss])
+    fig.write_image('C:/Users/liorm/PycharmProjects/IML.HUJI/datasets' + f"/quest4.png", engine='orca')
 
 
-
-def question_5(df):
-    israel_data = df[df['Country'] == 'Israel']
+def question_5(data):
+    israel_data = data[data['Country'] == 'Israel']
     model = PolynomialFitting(k=5).fit(israel_data['DayOfYear'].values, israel_data['Temp'].values)
-    jordan_loss = round(model.loss(df[df.Country == "Jordan"].DayOfYear, df[df.Country == "Jordan"].Temp), 2)
+    jordan_loss = round(model.loss(data[data.Country == "Jordan"].DayOfYear, data[data.Country == "Jordan"].Temp), 2)
     south_africa_loss = round(
-        model.loss(df[df.Country == "South Africa"].DayOfYear, df[df.Country == "South Africa"].Temp), 2)
+        model.loss(data[data.Country == "South Africa"].DayOfYear, data[data.Country == "South Africa"].Temp), 2)
     netherlands_loss = round(
-        model.loss(df[df.Country == "The Netherlands"].DayOfYear, df[df.Country == "The Netherlands"].Temp), 2)
+        model.loss(data[data.Country == "The Netherlands"].DayOfYear, data[data.Country == "The Netherlands"].Temp), 2)
 
     data = pd.DataFrame({"Country": ["Jordan", "South Africa", "The Netherlands"],
-                         "Loss": [south_africa_loss, netherlands_loss,jordan_loss]})
+                         "Loss": [south_africa_loss, netherlands_loss, jordan_loss]})
 
     fig = px.bar(data, x="Country", y="Loss", text="Loss", color="Country",
                  title="Loss value of different Countries with K=5")
-
     fig.show()
 
+    fig.write_image('C:/Users/liorm/PycharmProjects/IML.HUJI/datasets' + f"/quest5.png", engine='orca')
 
 
 if __name__ == '__main__':
     np.random.seed(0)
-    df = load_data('C:/Users/liorm/PycharmProjects/IML.HUJI/datasets/City_Temperature.csv')
-    # Question 1 - Load and preprocessing of city temperature dataset
 
+    # Question 1 - Load and preprocessing of city temperature dataset
+    df = load_data('C:/Users/liorm/PycharmProjects/IML.HUJI/datasets/City_Temperature.csv')
     # Question 2 - Exploring data for specific country
-    # specific_from_israel(df)
+    specific_from_israel(df)
 
     # Question 3 - Exploring differences between countries
-    # question_3(df)
+    question_3(df)
 
     # Question 4 - Fitting model for different values of `k`
     question_4(df)

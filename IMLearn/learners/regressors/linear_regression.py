@@ -3,6 +3,7 @@ from typing import NoReturn
 from ...base import BaseEstimator
 import numpy as np
 from numpy.linalg import pinv
+from IMLearn.metrics import mean_square_error
 import pandas as pd
 
 
@@ -54,7 +55,8 @@ class LinearRegression(BaseEstimator):
             self.coefs_ = pinv(X) @ y
         # else we should add column of 1 (which will represent the intercret) and then multiply by x dagger y
         else:
-            X = np.concatenate((np.ones((len(X), 1)), X), axis=1)
+            column = np.ones(len(X))
+            X = np.c_[column, X]
             self.coefs_ = pinv(X) @ y
 
     def _predict(self, X: np.ndarray) -> np.ndarray:
@@ -78,7 +80,6 @@ class LinearRegression(BaseEstimator):
             X = np.column_stack((ones, X))
         return (X @ self.coefs_)
 
-
     def _loss(self, X: np.ndarray, y: np.ndarray) -> float:
         """
         Evaluate performance under MSE loss function
@@ -100,6 +101,6 @@ class LinearRegression(BaseEstimator):
 
         # convert y and y_pred to Pandas Series objects
 
-        # according to the definition of the MSE
-        mse = np.square(np.subtract(y.transpose(), y_pred)).mean()
+        # use function already implemented
+        mse = mean_square_error(y, y_pred)
         return mse

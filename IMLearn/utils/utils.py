@@ -33,12 +33,14 @@ def split_train_test(X: pd.DataFrame, y: pd.Series, train_proportion: float = .7
         Responses of test samples
 
     """
+    train_proportion = round(train_proportion, 2)
 
     # The idea is to take all indices and then shuffle them to get randomly indices order
     indices = np.arange(len(X))
     np.random.shuffle(indices)
     train_samples_num = int(np.ceil(train_proportion * len(X)))
-    test_samples_num = int(np.floor((1 - train_proportion) * len(X)))
+    # Consider computer's numbers representation
+    test_samples_num = int(np.floor(round((1 - round(train_proportion, 1)) * len(X))))
     train_indices = indices[:train_samples_num]
     test_indices = indices[train_samples_num:train_samples_num + test_samples_num]
 
