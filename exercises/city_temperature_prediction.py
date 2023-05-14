@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.io as pio
+pd.options.mode.chained_assignment = None
 
 pio.templates.default = "simple_white"
 
@@ -61,7 +62,6 @@ def question_3(data):
                   labels={'avg_temp': 'Temperature (C)', 'Month': 'Month', "x": f"Month", "y": "Mean Temperature"})
     fig.write_image('C:/Users/liorm/PycharmProjects/IML.HUJI/datasets' + f"/groups.png", engine='orca')
 
-
 def question_4(data):
     israel_data = data[data['Country'] == 'Israel']
     array_of_loss = np.zeros(10)
@@ -90,12 +90,10 @@ def question_5(data):
         model.loss(data[data.Country == "The Netherlands"].DayOfYear, data[data.Country == "The Netherlands"].Temp), 2)
 
     data = pd.DataFrame({"Country": ["Jordan", "South Africa", "The Netherlands"],
-                         "Loss": [south_africa_loss, netherlands_loss, jordan_loss]})
+                         "Loss": [jordan_loss,south_africa_loss, netherlands_loss, ]})
 
     fig = px.bar(data, x="Country", y="Loss", text="Loss", color="Country",
                  title="Loss value of different Countries with K=5")
-    fig.show()
-
     fig.write_image('C:/Users/liorm/PycharmProjects/IML.HUJI/datasets' + f"/quest5.png", engine='orca')
 
 

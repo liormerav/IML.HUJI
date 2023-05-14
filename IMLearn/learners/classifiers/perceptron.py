@@ -31,6 +31,7 @@ class Perceptron(BaseEstimator):
             A callable to be called after each update of the model while fitting to given data
             Callable function should receive as input a Perceptron instance, current sample and current response
     """
+
     def __init__(self,
                  include_intercept: bool = True,
                  max_iter: int = 1000,
@@ -73,7 +74,34 @@ class Perceptron(BaseEstimator):
         -----
         Fits model with or without an intercept depending on value of `self.fit_intercept_`
         """
-        raise NotImplementedError()
+        if self.include_intercept_:
+            column = np.ones(len(X))
+            X = np.column_stack((column, X))
+        self.fitted_ = True
+        #flag indicates end of loop
+        terminate = False
+        # iterations number
+        iter_number = 0
+        while True:
+            # flag indicates that some value had changed inside the array , thus we should continue to the next
+            # iteration
+            value_changed = False
+            for index in range(len(X)):
+                # reached maximum iterations
+                if iter_number > self.max_iter_:
+                    terminate = True
+                    break
+                iter_number += 1
+                if y[index] * X[index] @ self.coefs_ <= 0:
+                    value_changed = True
+                    self.coefs_ += y[index] * X[index]
+                    self.callback_(self, X[index], y[index])
+            #meaning that there are not any misclassified samples
+            if not value_changed:
+               terminate = True
+            if terminate:
+                break
+        self.callback_(self, None, None)
 
     def _predict(self, X: np.ndarray) -> np.ndarray:
         """
@@ -89,7 +117,22 @@ class Perceptron(BaseEstimator):
         responses : ndarray of shape (n_samples, )
             Predicted responses of given samples
         """
-        raise NotImplementedError()
+        #meaning we should add column of 1
+        if self.include_intercept_ and self.coefs_[0] != X.shape[0]:
+            column = np.ones(len(X))
+            X = np.column_stack((column, X))
+        result = X @ self.coefs_
+        # negative inner product
+        if result < 0:
+            return np.array(-1)
+        # positive inner product
+        elif result > 0:
+            return np.array(1)
+        # the inner product was 0
+        return np.array(0)
+
+
+
 
     def _loss(self, X: np.ndarray, y: np.ndarray) -> float:
         """
@@ -109,4 +152,4 @@ class Perceptron(BaseEstimator):
             Performance under missclassification loss function
         """
         from ...metrics import misclassification_error
-        raise NotImplementedError()
+        return misclassification_error(y,self.predict(X))

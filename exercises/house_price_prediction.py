@@ -107,6 +107,7 @@ def preprocess_data(X: pd.DataFrame, y: Optional[pd.Series] = None):
     # add missing columns with default value of 0
     for col in missing_cols:
         data.insert(loc=len(data.columns), column=col, value=0)
+    data = data.reindex(columns = train_col,fill_value=0)
     return data.drop('price', axis=1)
 
 
@@ -215,5 +216,4 @@ if __name__ == '__main__':
                          paper_bgcolor='white',
                          font=dict(size=12, color='black')
                          ))
-    fig.show()
-    fig.write_image('C:/Users/liorm/PycharmProjects/IML.HUJI/datasets' + f"/Loss.png", engine='orca')
+    #fig.write_image('C:/Users/liorm/PycharmProjects/IML.HUJI/datasets' + f"/Loss.png", engine='orca')
