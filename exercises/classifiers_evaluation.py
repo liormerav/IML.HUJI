@@ -36,16 +36,36 @@ def run_perceptron():
     Create a line plot that shows the perceptron algorithm's training loss values (y-axis)
     as a function of the training iterations (x-axis).
     """
-    for n, f in [("Linearly Separable", "linearly_separable.npy"), ("Linearly Inseparable", "linearly_inseparable.npy")]:
+    for n, f in [("Linearly Separable", "linearly_separable.npy"),
+                 ("Linearly Inseparable", "linearly_inseparable.npy")]:
         # Load dataset
-        raise NotImplementedError()
+        X, y = load_dataset(f"../datasets/{f}")
 
         # Fit Perceptron and record loss in each fit iteration
-        losses = []
-        raise NotImplementedError()
+        # array for storing the loss values
+        loss_array = []
 
-        # Plot figure of loss as function of fitting iteration
-        raise NotImplementedError()
+        # This function is  callback function which receives the object and uses it is loss
+        # function to calculate the loss over the training set
+        def callback_loss_function(fit,ignore1,ignore2):
+            loss_array.append(fit.loss(X, y))
+
+        Perceptron(callback=callback_loss_function).fit(X, y)
+
+        fig = go.Figure(
+             go.Scatter(x=list(range(len(loss_array))), y=loss_array, name="Misclassification Error", mode="lines",
+                        marker=dict(color="blue")),
+            layout=go.Layout(title="Perceptron algorithm's misclassification error\nover " +n+ " Training data",
+                             xaxis=dict(title="Training iteration"),
+                             yaxis=dict(title="Misclassification Error"),
+                             showlegend=True,
+                             plot_bgcolor='white',
+                             paper_bgcolor='white',
+                             font=dict(size=12, color='black')
+                             ))
+        fig.show()
+
+
 
 
 def get_ellipse(mu: np.ndarray, cov: np.ndarray):

@@ -9,6 +9,8 @@ def default_callback(fit: Perceptron, x: np.ndarray, y: int):
     pass
 
 
+
+
 class Perceptron(BaseEstimator):
     """
     Perceptron half-space classifier
@@ -77,32 +79,23 @@ class Perceptron(BaseEstimator):
         if self.include_intercept_:
             column = np.ones(len(X))
             X = np.column_stack((column, X))
+        self.coefs_ = np.zeros(X.shape[1])
         self.fitted_ = True
-        #flag indicates end of loop
-        terminate = False
-        # iterations number
-        iter_number = 0
-        while True:
-            # flag indicates that some value had changed inside the array , thus we should continue to the next
-            # iteration
-            value_changed = False
+        # maximum iteration number
+        for iter in range(self.max_iter_):
+            #Indicates not found misclassification sample
+            i = -1
             for index in range(len(X)):
-                # reached maximum iterations
-                if iter_number > self.max_iter_:
-                    terminate = True
-                    break
-                iter_number += 1
                 if y[index] * X[index] @ self.coefs_ <= 0:
-                    value_changed = True
-                    self.coefs_ += y[index] * X[index]
-                    self.callback_(self, X[index], y[index])
-            #meaning that there are not any misclassified samples
-            if not value_changed:
-               terminate = True
-            if terminate:
+                    i = index
+                    break
+            if i == -1:
                 break
-        self.callback_(self, None, None)
+            #update coefs
+            self.coefs_ += y[i] * X[i]
+            self.callback_(self, X[i], y[i])
 
+        self.callback_(self, None, None)
     def _predict(self, X: np.ndarray) -> np.ndarray:
         """
         Predict responses for given samples using fitted estimator
@@ -117,19 +110,20 @@ class Perceptron(BaseEstimator):
         responses : ndarray of shape (n_samples, )
             Predicted responses of given samples
         """
+
         #meaning we should add column of 1
         if self.include_intercept_ and self.coefs_[0] != X.shape[0]:
             column = np.ones(len(X))
             X = np.column_stack((column, X))
         result = X @ self.coefs_
         # negative inner product
-        if result < 0:
-            return np.array(-1)
+        # negative inner product
+        result[result < 0] = -1
         # positive inner product
-        elif result > 0:
-            return np.array(1)
+        result[result > 0] = 1
         # the inner product was 0
-        return np.array(0)
+        result[result == 0] = 0
+        return result
 
 
 
