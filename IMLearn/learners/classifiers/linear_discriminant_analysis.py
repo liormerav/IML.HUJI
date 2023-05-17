@@ -25,6 +25,7 @@ class LDA(BaseEstimator):
     self.pi_: np.ndarray of shape (n_classes)
         The estimated class probabilities. To be set in `GaussianNaiveBayes.fit`
     """
+
     def __init__(self):
         """
         Instantiate an LDA classifier
@@ -46,7 +47,27 @@ class LDA(BaseEstimator):
         y : ndarray of shape (n_samples, )
             Responses of input data to fit to
         """
-        raise NotImplementedError()
+        # first we will obtain number of classes in y
+        self.classes_ = np.array(list(set(y)))
+        # now we will calculate the probability to be in each class
+        self.pi_ = len(self.classes_) / len(y)
+        # The expectancy is the average over each class as ew have seen in class
+        self.mu_ = []
+        for c in self.classes_:
+            # Get indices of the class
+            indices = np.where(y == c)
+            mean_class = np.mean(X[indices], axis=0)
+            self.mu_.append(mean_class)
+        # Convert list to numpy array
+        self.mu_ = np.array(self.mu_)
+        # calculate unbiased estimator
+        unbiased_division = (len(X) - len(self.classes_))
+        # creates a list y_mu that contains the mean vectors corresponding to each value in y
+        y_mu = [self.mu_[np.where(self.classes_ == y_val)][0] for y_val in y]
+        y_mu = np.array(y_mu)
+        x_mu = X - y_mu
+        self.cov_ = np.einsum("ab,ac->abc", x_mu, x_mu).sum(axis=0) / unbiased_division
+        self.cov_inv_ = inv(self.cov_)
 
     def _predict(self, X: np.ndarray) -> np.ndarray:
         """
@@ -62,7 +83,13 @@ class LDA(BaseEstimator):
         responses : ndarray of shape (n_samples, )
             Predicted responses of given samples
         """
-        raise NotImplementedError()
+        # calculate the liklihood for the sample to belong each class
+        likelihood = self.likelihood(X)
+        # finds the indices of the maximum likelihood values for each sample
+        class_indices = np.argmax(likelihood, axis=1)
+        # maps the predicted class indices to their corresponding class labels
+        prediction = self.classes_[class_indices]
+        return prediction
 
     def likelihood(self, X: np.ndarray) -> np.ndarray:
         """
@@ -82,7 +109,15 @@ class LDA(BaseEstimator):
         if not self.fitted_:
             raise ValueError("Estimator must first be fitted before calling `likelihood` function")
 
-        raise NotImplementedError()
+        dominator = np.sqrt(2 * np.pi) ** X.shape[1]
+        # we want the mu and x would have the same dimensions , so we would be able to subtract
+        x_mu = np.expand_dims(X, axis=1) - self.mu_
+        inner_product = x_mu @ self.cov_inv_
+        nominator = inner_product * x_mu
+        sum_nominator = np.sum(nominator, axis=2)
+        exp_nominator = np.exp(-0.5 * sum_nominator)
+        likelihood = exp_nominator / dominator
+        return likelihood
 
     def _loss(self, X: np.ndarray, y: np.ndarray) -> float:
         """
@@ -102,4 +137,4 @@ class LDA(BaseEstimator):
             Performance under missclassification loss function
         """
         from ...metrics import misclassification_error
-        raise NotImplementedError()
+        return misclassification_error(y, self.predict(X))
