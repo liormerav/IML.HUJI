@@ -49,8 +49,10 @@ class LDA(BaseEstimator):
         """
         # first we will obtain number of classes in y
         self.classes_ = np.array(list(set(y)))
-        # now we will calculate the probability to be in each class
-        self.pi_ = len(self.classes_) / len(y)
+        # calculate probabilities of each class
+        class_counts = np.bincount(y)
+        class_probabilities = class_counts / len(y)
+        self.pi_ = class_probabilities
         # The expectancy is the average over each class as ew have seen in class
         self.mu_ = []
         for c in self.classes_:
@@ -109,14 +111,15 @@ class LDA(BaseEstimator):
         if not self.fitted_:
             raise ValueError("Estimator must first be fitted before calling `likelihood` function")
 
-        dominator = np.sqrt(2 * np.pi) ** X.shape[1]
+        dominator = (2 * np.pi) ** X.shape[1] * np.linalg.det(self.cov_)
+        dominator_sqrt = np.sqrt(dominator)
         # we want the mu and x would have the same dimensions , so we would be able to subtract
         x_mu = np.expand_dims(X, axis=1) - self.mu_
         inner_product = x_mu @ self.cov_inv_
         nominator = inner_product * x_mu
         sum_nominator = np.sum(nominator, axis=2)
         exp_nominator = np.exp(-0.5 * sum_nominator)
-        likelihood = exp_nominator / dominator
+        likelihood = (exp_nominator / dominator_sqrt) * self.pi_
         return likelihood
 
     def _loss(self, X: np.ndarray, y: np.ndarray) -> float:

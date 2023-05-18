@@ -42,7 +42,10 @@ class GaussianNaiveBayes(BaseEstimator):
             Responses of input data to fit to
         """
         self.classes_ = np.array(list(set(y)))
-        self.pi_ = len(self.classes_) / len(y)
+        # calculate probabilities of each class
+        class_counts = np.bincount(y)
+        class_probabilities = class_counts / len(y)
+        self.pi_ = class_probabilities
         self.mu_ = []
         self.vars_ = []
         # we will calculate the mean and the variance for each class
@@ -98,18 +101,21 @@ class GaussianNaiveBayes(BaseEstimator):
         if not self.fitted_:
             raise ValueError("Estimator must first be fitted before calling `likelihood` function")
 
-        # TODO ask for help I dont get it
+        num_samples = X.shape[0]
+        number_classes = self.mu_.shape[0]
+        # define array
+        likelihood_arr = np.zeros((num_samples, number_classes))
 
-        differences = X[:, np.newaxis, :] - self.mu_  # Calculate the differences between X and self.mu_
-        squared_differences = differences ** 2  # Square the differences
-        exponents = squared_differences / (-2 * self.vars_)  # Compute the exponents of the Gaussian distribution's PDF
-        likelihoods = np.exp(exponents) / np.sqrt(
-            2 * np.pi * self.vars_)  # Compute the likelihoods for each class and feature
-        likelihood_product = np.ones_like(likelihoods[:, 0])  # Initialize the product with ones
-        for i in range(likelihoods.shape[1]):
-            likelihood_product *= likelihoods[:, i]  # Multiply the likelihoods along the second axis
-        predict = likelihood_product * self.pi_  # Multiply the likelihood by the class prior probabilities
-        return predict
+        for i in range(number_classes):
+            x_mu = X - self.mu_[i]
+            dominator = np.sqrt(2 * np.pi * self.vars_[i])
+            product = np.exp(-0.5 * (x_mu ** 2) / self.vars_[i]) / dominator
+            # calculate the multiplication of each row
+            x_class_likelihood = np.prod(product, axis=1)
+            # assigns the likelihood values to the i-th column
+            likelihood_arr[:, i] = x_class_likelihood * self.pi_[i]
+
+        return np.array(likelihood_arr)
 
     def _loss(self, X: np.ndarray, y: np.ndarray) -> float:
         """

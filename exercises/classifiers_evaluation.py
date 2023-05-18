@@ -47,15 +47,15 @@ def run_perceptron():
 
         # This function is  callback function which receives the object and uses it is loss
         # function to calculate the loss over the training set
-        def callback_loss_function(fit,ignore1,ignore2):
+        def callback_loss_function(fit, ignore1, ignore2):
             loss_array.append(fit.loss(X, y))
 
         Perceptron(callback=callback_loss_function).fit(X, y)
 
         fig = go.Figure(
-             go.Scatter(x=list(range(len(loss_array))), y=loss_array, name="Misclassification Error", mode="lines",
-                        marker=dict(color="blue")),
-            layout=go.Layout(title="Perceptron algorithm's misclassification error\nover " +n+ " Training data",
+            go.Scatter(x=list(range(len(loss_array))), y=loss_array, name="Misclassification Error", mode="lines",
+                       marker=dict(color="blue")),
+            layout=go.Layout(title="Perceptron algorithm's misclassification error\nover " + n + " Training data",
                              xaxis=dict(title="Training iteration"),
                              yaxis=dict(title="Misclassification Error"),
                              showlegend=True,
@@ -63,9 +63,7 @@ def run_perceptron():
                              paper_bgcolor='white',
                              font=dict(size=12, color='black')
                              ))
-        fig.show()
-
-
+        fig.write_image("Perceptron_Loss{}.png".format(f))
 
 
 def get_ellipse(mu: np.ndarray, cov: np.ndarray):
@@ -99,25 +97,65 @@ def compare_gaussian_classifiers():
     """
     for f in ["gaussian1.npy", "gaussian2.npy"]:
         # Load dataset
-        raise NotImplementedError()
+        X, y = load_dataset(f"../datasets/{f}")
 
         # Fit models and predict over training set
-        raise NotImplementedError()
+        gaussian_model = GaussianNaiveBayes().fit(X, y)
+        LDA_model = LDA().fit(X, y)
+        # prediction:
+        gaussian_predict = gaussian_model.predict(X)
+        LDA_predict = LDA_model.predict(X)
 
         # Plot a figure with two suplots, showing the Gaussian Naive Bayes predictions on the left and LDA predictions
         # on the right. Plot title should specify dataset used and subplot titles should specify algorithm and accuracy
         # Create subplots
         from IMLearn.metrics import accuracy
-        raise NotImplementedError()
+        accuracy_gaussian = round(accuracy(y, gaussian_predict) * 100, 3)
+        accuracy_LDA = round(accuracy(y, LDA_predict) * 100, 3)
+        fig = make_subplots(rows=1, cols=2,
+                            subplot_titles=(
+                                "  Prediction by Gaussian classifier,"
+                                " accuracy= {}%".format(accuracy_gaussian), "Prediction by LDA Classifier, "
+                                                                            "accuracy= {}%".format(accuracy_LDA)),
+                            horizontal_spacing=0.2)
+        X_values = X[:, 0]
+        y_values = X[:, 1]
+        # Add the traces to the figure
+        traceGaussianData = go.Scatter(x=X_values, y=y_values, mode='markers',
+                                       marker=dict(color=gaussian_predict, colorscale='Bluered',
+                                                   line=dict(width=1, color='black')))
 
-        # Add traces for data-points setting symbols and colors
-        raise NotImplementedError()
+        traceLDAData = go.Scatter(x=X_values, y=y_values, mode='markers',
+                                  marker=dict(color=LDA_predict, colorscale='Jet', symbol='square',
+                                              line=dict(width=1, color='black')))
+
+        fig.add_traces([traceGaussianData, traceLDAData], rows=[1, 1], cols=[1, 2])
+
+        # set subplot title Size
+        for annotation in fig['layout']['annotations']:
+            annotation['font'] = dict(size=12)
 
         # Add `X` dots specifying fitted Gaussians' means
-        raise NotImplementedError()
+        gaussian_X = gaussian_model.mu_[:, 0]
+        gaussian_y = gaussian_model.mu_[:, 1]
+        traceXGaussian = go.Scatter(x=gaussian_X, y=gaussian_y, mode="markers",
+                                    marker=dict(symbol="x", color="black", size=16))
+        LDA_X = LDA_model.mu_[:, 0]
+        LDA_y = LDA_model.mu_[:, 1]
+
+        traceXLDA = go.Scatter(x=LDA_X, y=LDA_y, mode="markers", marker=dict(symbol="x", color="black", size=16))
+
+        fig.add_traces([traceXGaussian, traceXLDA], rows=[1, 1], cols=[1, 2])
 
         # Add ellipses depicting the covariances of the fitted Gaussians
-        raise NotImplementedError()
+        for i in range(len(gaussian_model.classes_)):
+            traceGaussianElipse = get_ellipse(gaussian_model.mu_[i], np.diag(gaussian_model.vars_[i]))
+            traceLDAElipse = get_ellipse(LDA_model.mu_[i], LDA_model.cov_)
+            fig.add_traces([traceGaussianElipse, traceLDAElipse], rows=[1, 1], cols=[1, 2])
+
+        fig.update_layout(title_text="Guassian Model vs. LDA model - Over {}".format(f),
+                          width=700, height=400, showlegend=False)
+        fig.write_image("Gaussian_compared_LDA_{}.png".format(f))
 
 
 if __name__ == '__main__':
