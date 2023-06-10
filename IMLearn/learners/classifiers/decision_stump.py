@@ -20,6 +20,7 @@ class DecisionStump(BaseEstimator):
     self.sign_: int
         The label to predict for samples where the value of the j'th feature is about the threshold
     """
+
     def __init__(self) -> DecisionStump:
         """
         Instantiate a Decision stump classifier
@@ -39,7 +40,23 @@ class DecisionStump(BaseEstimator):
         y : ndarray of shape (n_samples, )
             Responses of input data to fit to
         """
-        raise NotImplementedError()
+        # we need to find the beast feature and threshold, so we will use the product function
+        error = np.inf
+        # generates pairs of values from the Cartesian product of range(X.shape[1]) and [-1, 1]
+        iterator = iter(product(range(X.shape[1]), [-1, 1]))
+        while True:
+            try:
+                # pair of j and sign
+                j, sign = next(iterator)
+            except StopIteration:
+                break
+
+            current_threshold, threshold_error_cur = self._find_threshold(X[:, j], y, sign)
+            if threshold_error_cur < error:
+                self.threshold_ = current_threshold
+                self.j_ = j
+                self.sign_ = sign
+                error = threshold_error_cur
 
     def _predict(self, X: np.ndarray) -> np.ndarray:
         """
@@ -63,7 +80,9 @@ class DecisionStump(BaseEstimator):
         Feature values strictly below threshold are predicted as `-sign` whereas values which equal
         to or above the threshold are predicted as `sign`
         """
-        raise NotImplementedError()
+        mask = X[:, self.j_] < self.threshold_
+        result = np.where(mask, -self.sign_, self.sign_)
+        return result
 
     def _find_threshold(self, values: np.ndarray, labels: np.ndarray, sign: int) -> Tuple[float, float]:
         """
@@ -95,7 +114,41 @@ class DecisionStump(BaseEstimator):
         For every tested threshold, values strictly below threshold are predicted as `-sign` whereas values
         which equal to or above the threshold are predicted as `sign`
         """
-        raise NotImplementedError()
+        # Calculate the initial loss
+        loss = np.sum(np.sign(labels) != np.sign(-sign))
+        c_loss = loss
+
+        # Combine values and labels into a single array
+        concatenated_data = np.column_stack((values, labels))
+
+        # Sort the data based on the values in the first column
+        sort_data = concatenated_data[concatenated_data[:, 0].argsort()]
+
+        # Initialize variables
+        thr = np.inf
+        i = len(values)
+
+        # Iterate over the sorted data
+        while i > 0:
+            # Calculate the current difference
+            cur_diff = np.sign(sort_data[i - 1, 1]) * sign
+
+            # Update cumulative loss
+            c_loss = c_loss - cur_diff
+
+            # Update the loss if the cumulative loss is smaller
+            loss = min(c_loss, loss)
+
+            # Update the threshold if the cumulative loss is smaller or equal to the loss
+            if c_loss <= loss:
+                thr = sort_data[i - 1, 0]
+
+            i -= 1
+
+        # Calculate the normalized loss
+        normalized_loss = loss / len(values)
+
+        return thr, normalized_loss
 
     def _loss(self, X: np.ndarray, y: np.ndarray) -> float:
         """
@@ -114,4 +167,5 @@ class DecisionStump(BaseEstimator):
         loss : float
             Performance under missclassification loss function
         """
-        raise NotImplementedError()
+        from ...metrics import misclassification_error
+        return misclassification_error(y, self._predict(X))

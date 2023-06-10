@@ -65,7 +65,7 @@ class LDA(BaseEstimator):
         # calculate unbiased estimator
         unbiased_division = (len(X) - len(self.classes_))
         # creates a list y_mu that contains the mean vectors corresponding to each value in y
-        y_mu = [self.mu_[np.where(self.classes_ == y_val)][0] for y_val in y]
+        y_mu = [self.mu_[np.where(self.classes_ == int(y_val))][0] for y_val in y]
         y_mu = np.array(y_mu)
         x_mu = X - y_mu
         self.cov_ = np.einsum("ab,ac->abc", x_mu, x_mu).sum(axis=0) / unbiased_division

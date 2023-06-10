@@ -66,6 +66,7 @@ def run_perceptron():
         fig.write_image("Perceptron_Loss{}.png".format(f))
 
 
+
 def get_ellipse(mu: np.ndarray, cov: np.ndarray):
     """
     Draw an ellipse centered at given location and according to specified covariance matrix

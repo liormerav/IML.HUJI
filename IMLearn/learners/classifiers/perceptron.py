@@ -9,8 +9,6 @@ def default_callback(fit: Perceptron, x: np.ndarray, y: int):
     pass
 
 
-
-
 class Perceptron(BaseEstimator):
     """
     Perceptron half-space classifier
@@ -83,7 +81,7 @@ class Perceptron(BaseEstimator):
         self.fitted_ = True
         # maximum iteration number
         for iter in range(self.max_iter_):
-            #Indicates not found misclassification sample
+            # Indicates not found misclassification sample
             i = -1
             for index in range(len(X)):
                 if y[index] * X[index] @ self.coefs_ <= 0:
@@ -91,11 +89,12 @@ class Perceptron(BaseEstimator):
                     break
             if i == -1:
                 break
-            #update coefs
+            # update coefs
             self.coefs_ += y[i] * X[i]
             self.callback_(self, X[i], y[i])
 
         self.callback_(self, None, None)
+
     def _predict(self, X: np.ndarray) -> np.ndarray:
         """
         Predict responses for given samples using fitted estimator
@@ -111,12 +110,11 @@ class Perceptron(BaseEstimator):
             Predicted responses of given samples
         """
 
-        #meaning we should add column of 1
+        # meaning we should add column of 1
         if self.include_intercept_ and self.coefs_[0] != X.shape[0]:
             column = np.ones(len(X))
             X = np.column_stack((column, X))
         result = X @ self.coefs_
-        # negative inner product
         # negative inner product
         result[result < 0] = -1
         # positive inner product
@@ -124,9 +122,6 @@ class Perceptron(BaseEstimator):
         # the inner product was 0
         result[result == 0] = 0
         return result
-
-
-
 
     def _loss(self, X: np.ndarray, y: np.ndarray) -> float:
         """
@@ -146,4 +141,4 @@ class Perceptron(BaseEstimator):
             Performance under missclassification loss function
         """
         from ...metrics import misclassification_error
-        return misclassification_error(y,self.predict(X))
+        return misclassification_error(y, self.predict(X))
